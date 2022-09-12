@@ -1,22 +1,24 @@
 device: gpu
 
 dataset_args:
-
   d_type: train
+  dataset_path: "/data/students/louis/standfordcars/standfordcars"
+  img_size: 288
+  transform: 
+    - resize
+    - randomflip
+    - randomcrop
+    - tensor
 
-  dataset_path: /home/tom/Projects/MaastrichtAI/research_project2/MA2---Towards-real-time-support-for-a-suicide-prevention-hotline-operators-/filtered_conv
 
-
+model_args:
+  epochs: 50
+  lr: 1e-2
 
 
 dataloader_args:
-
   num_workers: 6
-
-  batch_size: 128
-
+  train_batch: 128
+  test_batch: 32
   shuffle: True
 
-train_epochs: 4
-
-evaluation: None

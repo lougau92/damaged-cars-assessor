@@ -1,7 +1,7 @@
 from multiprocessing import freeze_support
 import argparse
-
-
+import config
+from train_ae import train_CAE
  
 config_dict = None
 
@@ -13,8 +13,8 @@ if __name__ == "__main__":
 
 if args.config:
     config_dict = config.get_args(args.config)
-    # test()
-    # train()
-    #else:
-    #raise ValueError("Config file not set. Use '--config <path_to_file>' to load a configuration.")
+    print(config_dict)
+    # train_CAE(data_root, lr, transform =None, epochs=1, train_batch = 16)
+else:
+    raise ValueError("Config file not set. Use '--config <path_to_file>' to load a configuration.")
 
