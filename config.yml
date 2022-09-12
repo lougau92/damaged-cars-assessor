@@ -1,24 +1,25 @@
 device: gpu
 
-dataset_args:
-  d_type: train
-  dataset_path: "/data/students/louis/standfordcars/standfordcars"
-  img_size: 288
-  transform: 
-    - resize
-    - randomflip
-    - randomcrop
-    - tensor
+# dataset_args:
+d_type: train
+# dataset_path: "/data/students/louis/standfordcars/standfordcars"
+dataset_path: "C:/Users/louis/thesis/cars_data_corrected/data3a"
+img_size: 288
+transforms: "
+  resize,
+  randomflip,
+  randomcrop,
+  tensor"
+
+# model_args:
+epochs: 50
+lr: 0.01
+latent_dim: 1000
 
 
-model_args:
-  epochs: 50
-  lr: 1e-2
-
-
-dataloader_args:
-  num_workers: 6
-  train_batch: 128
-  test_batch: 32
-  shuffle: True
+# dataloader_args:
+num_workers: 6
+train_batch: 128
+test_batch: 32
+shuffle: True
 

@@ -4,26 +4,19 @@ import pandas as pd
 import scipy
 import torchvision
 from torch import optim,nn
-from utils import StanfordCars
+from utils import StanfordCars, parse_transforms
 import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
 
-# Params
 
-# # ae complexity
-# img_size = 288
 # transform = torchvision.transforms.Compose([
 #     torchvision.transforms.Resize((img_size,img_size)),
 #     #T.RandomResizedCrop(image_size), # data augmentation
 #     # T.RandomHorizontalFlip(),
 #     torchvision.transforms.ToTensor()])
-# train_batch = 128
-# test_batch = 32
-# lr=1e-2
-# data_root = "/data/students/louis/standfordcars/standfordcars"
-# epochs = 50
+
 
 class AE(nn.Module):
     def __init__(self, **kwargs):
@@ -108,17 +101,17 @@ class CAE(nn.Module):
         
         
         
-def train_CAE(data_root, lr, transform =None, epochs=1, train_batch = 16):
-    
-    train_dataset = StanfordCars(root=data_root,split ="test",transform=transform)
-    train_loader = torch.utils.data.DataLoader( train_dataset, batch_size=train_batch, shuffle=True, num_workers=4, pin_memory=True)
+def train_CAE(data_root, lr, img_size, latent_dim, transforms, epochs=1, train_batch = 16, num_workers =4, shuffle = True):
+
+    train_dataset = StanfordCars(root=data_root,split ="train",transform=transforms)
+    train_loader = torch.utils.data.DataLoader( train_dataset, batch_size=train_batch, shuffle=shuffle, num_workers=num_workers, pin_memory=True)
 
     #  use gpu if available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu",0)
-    print(device)
+    print("Device used: ",device)
 
     # model = AE(input_shape=img_size*img_size*3).to(device)
-    model = CAE(3,3,1000).to(device)
+    model = CAE(3,3,img_size,latent_dim).to(device)
 
     # create an optimizer object
     optimizer = optim.Adam(model.parameters(), lr)

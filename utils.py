@@ -1,9 +1,12 @@
 import os
 import torch
+import torchvision
+import numpy as np
 from torch.utils.data import Dataset
 from PIL import Image
 import pandas as pd
 from torchvision.io import read_image
+import torchvision.transforms as transforms
 
 
 class StanfordCars(Dataset):
@@ -93,3 +96,16 @@ def build_dataset(data_path,classes,dataset_name,dataset_transforms):
     dataset = CustomImageDataset(annotations_file=dataset_name,img_dirs=list_img_dirs,transform= dataset_transforms)   
     
     return dataset
+
+def parse_transforms(trans_str_list,img_size):
+    
+    switch = {
+        "pil" : transforms.ToPILImage(),
+        "resize" : torchvision.transforms.Resize((img_size,img_size)),
+        "randomflip" : transforms.RandomHorizontalFlip(),
+        "randomcrop" : transforms.RandomResizedCrop(int(4*img_size/5)),
+        "tensor" : torchvision.transforms.ToTensor()
+        } 
+    
+    return torchvision.transforms.Compose([switch.get(x) for x in trans_str_list])
+                   
