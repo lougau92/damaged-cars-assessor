@@ -1,3 +1,5 @@
+from tabnanny import verbose
+import config as c
 import torch
 import os
 import pandas as pd
@@ -9,42 +11,9 @@ import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
-
-
-# transform = torchvision.transforms.Compose([
-#     torchvision.transforms.Resize((img_size,img_size)),
-#     #T.RandomResizedCrop(image_size), # data augmentation
-#     # T.RandomHorizontalFlip(),
-#     torchvision.transforms.ToTensor()])
-
-
-class AE(nn.Module):
-    def __init__(self, **kwargs):
-        super(AE, self).__init__()
-        # encoder
-        self.enc1 = nn.Linear(in_features=kwargs["input_shape"], out_features=256)
-        self.enc2 = nn.Linear(in_features=256, out_features=128)
-        self.enc3 = nn.Linear(in_features=128, out_features=64)
-        self.enc4 = nn.Linear(in_features=64, out_features=32)
-        # self.enc5 = nn.Linear(in_features=32, out_features=16)
-        # decoder 
-        # self.dec1 = nn.Linear(in_features=16, out_features=32)
-        self.dec2 = nn.Linear(in_features=32, out_features=64)
-        self.dec3 = nn.Linear(in_features=64, out_features=128)
-        self.dec4 = nn.Linear(in_features=128, out_features=256)
-        self.dec5 = nn.Linear(in_features=256, out_features=kwargs["input_shape"])
-    def forward(self, x):
-        x = F.relu(self.enc1(x))
-        x = F.relu(self.enc2(x))
-        x = F.relu(self.enc3(x))
-        x = F.relu(self.enc4(x))
-        # x = F.relu(self.nc5(x))
-        # x = F.relu(self.dec1(x))
-        x = F.relu(self.dec2(x))
-        x = F.relu(self.dec3(x))
-        x = F.relu(self.dec4(x))
-        x = F.relu(self.dec5(x))
-        return x
+from tqdm import tqdm
+from time import gmtime, strftime
+import time
     
 class CAE(nn.Module):
     
@@ -89,7 +58,7 @@ class CAE(nn.Module):
             nn.Conv2d(c_hid, c_hid, kernel_size=3, padding=1),
             act_fn(),
             nn.ConvTranspose2d(c_hid, num_input_channels, kernel_size=3, output_padding=1, padding=1, stride=2), # 144x144 => 288x288
-            nn.Tanh() # The input images is scaled between -1 and 1, hence the output has to be bounded as well
+            nn.Sigmoid() # The input images is scaled between 0 and 1
         )
 
     def forward(self, x):
@@ -100,11 +69,24 @@ class CAE(nn.Module):
             return x
         
         
-        
-def train_CAE(data_root, lr, img_size, latent_dim, transforms, epochs=1, train_batch = 16, num_workers =4, shuffle = True):
+# https://uvadlc-notebooks.readthedocs.io/en/latest/tutorial_notebooks/tutorial9/AE_CIFAR10.html     
+def train_CAE(
+    data_root,
+    lr,
+    img_size, 
+    latent_dim,
+    transforms, 
+    epochs=1,
+    train_batch = 16, 
+    num_workers =4,
+    shuffle = True,
+    config_path = "./no_path.yml"
+    ):
 
     train_dataset = StanfordCars(root=data_root,split ="train",transform=transforms)
     train_loader = torch.utils.data.DataLoader( train_dataset, batch_size=train_batch, shuffle=shuffle, num_workers=num_workers, pin_memory=True)
+    v_dataset = StanfordCars(root=data_root,split ="validation",transform=transforms)
+    v_loader = torch.utils.data.DataLoader(v_dataset, batch_size=int(train_batch/2), shuffle=shuffle, num_workers=num_workers, pin_memory=True)
 
     #  use gpu if available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu",0)
@@ -115,45 +97,75 @@ def train_CAE(data_root, lr, img_size, latent_dim, transforms, epochs=1, train_b
 
     # create an optimizer object
     optimizer = optim.Adam(model.parameters(), lr)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
+                                                         mode='min',
+                                                         factor=0.2,
+                                                         patience=5,
+                                                         min_lr=5e-4,
+                                                         verbose = True)
 
     # mean-squared error loss
-    criterion = nn.MSELoss()
+    # criterion = nn.MSELoss()
 
-
-    restored_imgs = []
     losses = []
-    for epoch in range(epochs):
+    start_time = time.time()
+
+    for epoch in tqdm(range(epochs)):
         loss = 0
-        for batch_features, _ in train_loader:
+        min = 1
+        for x, _ in train_loader:
             
             # batch_features = batch_features.view(-1, img_size*img_size*3).to(device)
-            batch_features = batch_features.to(device)
-
+            x = x.to(device)
             # reset the gradients back to zero
             # PyTorch accumulates gradients on subsequent backward passes
             optimizer.zero_grad()
             
             # compute reconstructions
-            outputs = model(batch_features)
+            x_hat = model(x)
             
+            min = torch.min(x_hat)
             # compute training reconstruction loss
-            train_loss = criterion(outputs, batch_features)
+            train_loss = F.mse_loss(x, x_hat, reduction="none")
+            train_loss = train_loss.sum(dim=[1,2,3]).mean(dim=[0])
+            # train_loss = criterion(outputs, batch_features)
             
             # compute accumulated gradients
             train_loss.backward()
             
             # perform parameter update based on current gradients
             optimizer.step()
-            
-            # add the mini-batch training loss to epoch loss
             loss += train_loss.item()
         
         # compute the epoch training loss
         loss = loss / len(train_loader)
-        losses.append(loss)
-        restored_imgs.append((epochs, batch_features, outputs))
-    
-        # display the epoch training loss
-        print("epoch : {}/{}, loss = {:.6f}".format(epoch + 1, epochs, loss))
-    # save mode
-    # store metrics
+        val_loss = validate(v_loader,model,device)
+        scheduler.step(val_loss)
+
+        losses.append((epoch,loss,val_loss,min))
+ 
+    model_name = strftime("CAE %d%b%Hh%M",gmtime(time.time()))
+
+    metrics = {"losses":losses,"running time":time.time()-start_time}
+
+    os.mkdir("./models/"+model_name+"/")
+    c.Config.store_args(c.Config, args = metrics,path = "./models/"+model_name+"/metrics.yml")
+
+    PATH = './models/'+model_name+'/model.pth'
+    torch.save(model.state_dict(), PATH)
+
+    args = c.Config.get_args(config_path)
+    args["model_paths"] = args["model_paths"] + [PATH]
+    c.Config.store_args(c.Config, args = args,path = config_path)
+
+def validate(data,model,device):
+    vloss = 0
+    for x,_ in iter(data):
+        x = x.to(device)
+        x_hat = model(x)
+        loss = F.mse_loss(x, x_hat, reduction="none")
+        loss = loss.sum(dim=[1,2,3]).mean(dim=[0])
+        vloss += loss.item()
+
+    return vloss/len(data)
+

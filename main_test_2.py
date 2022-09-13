@@ -21,7 +21,8 @@ if args.config:
         lr = config_dict["lr"],
         epochs = config_dict["epochs"],
         train_batch= config_dict["train_batch"],
-        transforms= parse_transforms(config_dict["transforms"].split(', '),config_dict["img_size"])
+        transforms= parse_transforms(config_dict["transforms"].split(','),config_dict["img_size"]),
+        config_path= args.config
     )
     
 else:

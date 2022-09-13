@@ -7,21 +7,19 @@ from PIL import Image
 import pandas as pd
 from torchvision.io import read_image
 import torchvision.transforms as transforms
-
+import random
+import shutil
 
 class StanfordCars(Dataset):
     
-    def __init__(self, root: str, split: str = "train", transform=None, target_transform=None):
+    def __init__(self, transform, root: str, split: str = "train", target_transform=None):
         self.transform = transform
         self.target_transform = target_transform
         self._split = split
         self._base_folder = root
 
-        if self._split == "train":
-            self._images_base_path = self._base_folder + "/train/"
-        else:
-            self._images_base_path = self._base_folder + "/test/"
-
+        self._images_base_path = self._base_folder + split +"/"
+    
         annotation = pd.DataFrame({"Filename":os.listdir(self._images_base_path)})
 
         self._samples = [
@@ -106,6 +104,19 @@ def parse_transforms(trans_str_list,img_size):
         "randomcrop" : transforms.RandomResizedCrop(int(4*img_size/5)),
         "tensor" : torchvision.transforms.ToTensor()
         } 
-    
+
     return torchvision.transforms.Compose([switch.get(x) for x in trans_str_list])
                    
+def move_files (
+    source = "/data/students/louis/standfordcars/standfordcars/test/",
+    dest = "/data/students/louis/standfordcars/standfordcars/val/"
+    ):
+    list_imgs = os.listdir(source)
+
+    test_set = random.sample(list_imgs,100)
+
+    for file in test_set:
+        # construct full file path
+        destination = dest + file
+        # move file
+        shutil.move(source+ file, destination)
