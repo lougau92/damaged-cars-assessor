@@ -1,4 +1,5 @@
 from tabnanny import verbose
+from this import d
 import config as c
 import torch
 import os
@@ -14,7 +15,11 @@ import torch.nn.functional as F
 from tqdm import tqdm
 from time import gmtime, strftime
 import time
-    
+
+class Hello(): 
+    def __init__(self) -> None:
+        pass
+
 class CAE(nn.Module):
     
     def __init__(self,
@@ -80,7 +85,11 @@ def train_CAE(
     train_batch = 16, 
     num_workers =4,
     shuffle = True,
-    config_path = "./no_path.yml"
+    config_path = "./no_path.yml",
+    factor=0.2,
+    patience=5,
+    min_lr=1e-3,
+    mode="min"
     ):
 
     train_dataset = StanfordCars(root=data_root,split ="train",transform=transforms)
@@ -98,14 +107,13 @@ def train_CAE(
     # create an optimizer object
     optimizer = optim.Adam(model.parameters(), lr)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
-                                                         mode='min',
-                                                         factor=0.2,
-                                                         patience=5,
-                                                         min_lr=5e-4,
-                                                         verbose = True)
+                                                         mode=mode,
+                                                         factor=factor,
+                                                         patience=patience,
+                                                         min_lr=min_lr,
+                                                         )
 
-    # mean-squared error loss
-    # criterion = nn.MSELoss()
+
 
     losses = []
     start_time = time.time()
@@ -123,8 +131,8 @@ def train_CAE(
             
             # compute reconstructions
             x_hat = model(x)
-            
-            min = torch.min(x_hat)
+
+            min = torch.min(x_hat).item()
             # compute training reconstruction loss
             train_loss = F.mse_loss(x, x_hat, reduction="none")
             train_loss = train_loss.sum(dim=[1,2,3]).mean(dim=[0])

@@ -22,7 +22,11 @@ if args.config:
         epochs = config_dict["epochs"],
         train_batch= config_dict["train_batch"],
         transforms= parse_transforms(config_dict["transforms"].split(','),config_dict["img_size"]),
-        config_path= args.config
+        config_path= args.config,
+        patience=config_dict["patience"],
+        min_lr=config_dict["min_lr"],
+        factor=config_dict["factor"],
+        mode=config_dict["mode"]
     )
     
 else:
