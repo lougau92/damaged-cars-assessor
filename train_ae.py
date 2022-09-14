@@ -27,7 +27,7 @@ class CAE(nn.Module):
                  base_channel_size : int,
                  img_size : int,
                  latent_dim : int,
-                 act_fn : object = nn.GELU,
+                 act_fn : object = nn.GELU
                  ):
        
         super().__init__()
@@ -63,7 +63,8 @@ class CAE(nn.Module):
             nn.Conv2d(c_hid, c_hid, kernel_size=3, padding=1),
             act_fn(),
             nn.ConvTranspose2d(c_hid, num_input_channels, kernel_size=3, output_padding=1, padding=1, stride=2), # 144x144 => 288x288
-            nn.Sigmoid() # The input images is scaled between 0 and 1
+            nn.Tanh() # The input images is scaled between -1 and 1
+            # act_fn()
         )
 
     def forward(self, x):
@@ -76,6 +77,7 @@ class CAE(nn.Module):
         
 # https://uvadlc-notebooks.readthedocs.io/en/latest/tutorial_notebooks/tutorial9/AE_CIFAR10.html     
 def train_CAE(
+    dataset,
     data_root,
     lr,
     img_size, 
@@ -92,17 +94,29 @@ def train_CAE(
     mode="min"
     ):
 
-    train_dataset = StanfordCars(root=data_root,split ="train",transform=transforms)
+    pretrained_latent_dims = [64,128,256,384]
+
+    dataset_list = {
+        "standford":
+        (StanfordCars(root=data_root,split ="train",transform=transforms),StanfordCars(root=data_root,split ="validation",transform=transforms)),
+        "cifar10":
+        (torchvision.datasets.CIFAR10(root=data_root, train=True,transform=transforms,download=True),torchvision.datasets.CIFAR10(root=data_root,train=False,transform=transforms,download=True))
+    }
+    (train_dataset,v_dataset) = dataset_list[dataset]
+
     train_loader = torch.utils.data.DataLoader( train_dataset, batch_size=train_batch, shuffle=shuffle, num_workers=num_workers, pin_memory=True)
-    v_dataset = StanfordCars(root=data_root,split ="validation",transform=transforms)
     v_loader = torch.utils.data.DataLoader(v_dataset, batch_size=int(train_batch/2), shuffle=shuffle, num_workers=num_workers, pin_memory=True)
 
     #  use gpu if available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu",0)
     print("Device used: ",device)
 
-    # model = AE(input_shape=img_size*img_size*3).to(device)
     model = CAE(3,3,img_size,latent_dim).to(device)
+
+    if latent_dim in pretrained_latent_dims:
+        print(f"pretraining on cifar10_{latent_dim}..")
+        pretrained_model_path = os.path.join("./models/", f"cifar10_{latent_dim}.pth")
+        model.load_state_dict(torch.load(pretrained_model_path))
 
     # create an optimizer object
     optimizer = optim.Adam(model.parameters(), lr)

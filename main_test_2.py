@@ -26,7 +26,8 @@ if args.config:
         patience=config_dict["patience"],
         min_lr=config_dict["min_lr"],
         factor=config_dict["factor"],
-        mode=config_dict["mode"]
+        mode=config_dict["mode"],
+        dataset=config_dict["dataset"]
     )
     
 else:

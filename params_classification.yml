@@ -1,0 +1,3 @@
+data_path: /data/students/louis/cars data/data3a/
+train_batch: 32
+transforms: pil,resize,tensor

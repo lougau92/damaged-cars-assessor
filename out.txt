@@ -1,0 +1,73 @@
+nohup: ignoring input
+The Zen of Python, by Tim Peters
+
+Beautiful is better than ugly.
+Explicit is better than implicit.
+Simple is better than complex.
+Complex is better than complicated.
+Flat is better than nested.
+Sparse is better than dense.
+Readability counts.
+Special cases aren't special enough to break the rules.
+Although practicality beats purity.
+Errors should never pass silently.
+Unless explicitly silenced.
+In the face of ambiguity, refuse the temptation to guess.
+There should be one-- and preferably only one --obvious way to do it.
+Although that way may not be obvious at first unless you're Dutch.
+Now is better than never.
+Although never is often better than *right* now.
+If the implementation is hard to explain, it's a bad idea.
+If the implementation is easy to explain, it may be a good idea.
+Namespaces are one honking great idea -- let's do more of those!
+Traceback (most recent call last):
+  File "/homeusers/p63744/software/miniconda3/envs/test_env2/lib/python3.8/urllib/request.py", line 1354, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+  File "/homeusers/p63744/software/miniconda3/envs/test_env2/lib/python3.8/http/client.py", line 1256, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+  File "/homeusers/p63744/software/miniconda3/envs/test_env2/lib/python3.8/http/client.py", line 1302, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+  File "/homeusers/p63744/software/miniconda3/envs/test_env2/lib/python3.8/http/client.py", line 1251, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/homeusers/p63744/software/miniconda3/envs/test_env2/lib/python3.8/http/client.py", line 1011, in _send_output
+    self.send(msg)
+  File "/homeusers/p63744/software/miniconda3/envs/test_env2/lib/python3.8/http/client.py", line 951, in send
+    self.connect()
+  File "/homeusers/p63744/software/miniconda3/envs/test_env2/lib/python3.8/http/client.py", line 1418, in connect
+    super().connect()
+  File "/homeusers/p63744/software/miniconda3/envs/test_env2/lib/python3.8/http/client.py", line 927, in connect
+    self._tunnel()
+  File "/homeusers/p63744/software/miniconda3/envs/test_env2/lib/python3.8/http/client.py", line 905, in _tunnel
+    raise OSError("Tunnel connection failed: %d %s" % (code,
+OSError: Tunnel connection failed: 403 Forbidden
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "main_test_2.py", line 17, in <module>
+    train_CAE(
+  File "/homeusers/p63744/damaged-cars-assessor/train_ae.py", line 103, in train_CAE
+    (torchvision.datasets.CIFAR10(root=data_root, train=True,transform=transforms,download=True),torchvision.datasets.CIFAR10(root=data_root,train=False,transform=transforms,download=True))
+  File "/homeusers/p63744/software/miniconda3/envs/test_env2/lib/python3.8/site-packages/torchvision/datasets/cifar.py", line 65, in __init__
+    self.download()
+  File "/homeusers/p63744/software/miniconda3/envs/test_env2/lib/python3.8/site-packages/torchvision/datasets/cifar.py", line 141, in download
+    download_and_extract_archive(self.url, self.root, filename=self.filename, md5=self.tgz_md5)
+  File "/homeusers/p63744/software/miniconda3/envs/test_env2/lib/python3.8/site-packages/torchvision/datasets/utils.py", line 446, in download_and_extract_archive
+    download_url(url, download_root, filename, md5)
+  File "/homeusers/p63744/software/miniconda3/envs/test_env2/lib/python3.8/site-packages/torchvision/datasets/utils.py", line 146, in download_url
+    url = _get_redirect_url(url, max_hops=max_redirect_hops)
+  File "/homeusers/p63744/software/miniconda3/envs/test_env2/lib/python3.8/site-packages/torchvision/datasets/utils.py", line 94, in _get_redirect_url
+    with urllib.request.urlopen(urllib.request.Request(url, headers=headers)) as response:
+  File "/homeusers/p63744/software/miniconda3/envs/test_env2/lib/python3.8/urllib/request.py", line 222, in urlopen
+    return opener.open(url, data, timeout)
+  File "/homeusers/p63744/software/miniconda3/envs/test_env2/lib/python3.8/urllib/request.py", line 525, in open
+    response = self._open(req, data)
+  File "/homeusers/p63744/software/miniconda3/envs/test_env2/lib/python3.8/urllib/request.py", line 542, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+  File "/homeusers/p63744/software/miniconda3/envs/test_env2/lib/python3.8/urllib/request.py", line 502, in _call_chain
+    result = func(*args)
+  File "/homeusers/p63744/software/miniconda3/envs/test_env2/lib/python3.8/urllib/request.py", line 1397, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+  File "/homeusers/p63744/software/miniconda3/envs/test_env2/lib/python3.8/urllib/request.py", line 1357, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error Tunnel connection failed: 403 Forbidden>
