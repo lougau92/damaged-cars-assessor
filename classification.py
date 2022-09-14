@@ -64,7 +64,7 @@ def train_model(
     model = model_dict[model_type]
 
 
-    # https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html see train on gpu
+    # https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9)
 
