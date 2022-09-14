@@ -47,7 +47,7 @@ class StanfordCars(Dataset):
         return (pil_image, target)
     
     
-class CustomImageDataset(Dataset):
+class CarsDataset(Dataset):
     def __init__(self, annotations_file, img_dirs, transform=None, target_transform=None):
         self.img_labels = pd.read_csv(annotations_file)
         self.img_dirs = img_dirs
@@ -75,6 +75,7 @@ class CustomImageDataset(Dataset):
             label = self.target_transform(label)
         return image, label
 
+# function build espcially from loading the cars_data dataset, that organised the images in their corresponding class folder
 def build_dataset(data_path,classes,dataset_name,dataset_transforms):
     labels_df = pd.DataFrame()
     list_img_dirs =[]
@@ -91,10 +92,11 @@ def build_dataset(data_path,classes,dataset_name,dataset_transforms):
         labels_df = pd.DataFrame({"Filename":list_files,"Label":list_labels.astype(int)})
     labels_df.to_csv(dataset_name, index = False)
     
-    dataset = CustomImageDataset(annotations_file=dataset_name,img_dirs=list_img_dirs,transform= dataset_transforms)   
+    dataset = CarsDataset(annotations_file=dataset_name,img_dirs=list_img_dirs,transform= dataset_transforms)   
     
     return dataset
 
+# converts an array of strings to pytorch transforms
 def parse_transforms(trans_str_list,img_size):
     
     switch = {
@@ -106,7 +108,8 @@ def parse_transforms(trans_str_list,img_size):
         } 
 
     return torchvision.transforms.Compose([switch.get(x) for x in trans_str_list])
-                   
+ 
+# moving files from a directory to another
 def move_files (
     source = "/data/students/louis/standfordcars/standfordcars/test/",
     dest = "/data/students/louis/standfordcars/standfordcars/val/"

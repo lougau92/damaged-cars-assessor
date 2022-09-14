@@ -1,21 +1,20 @@
-1&num_workers: 6
-dataset: cifar10
 d_type: train
-dataset_path: /data/students/louis/cifar10/
+dataset: standford
+dataset_path: /data/students/louis/standfordcars/standfordcars/
 device: gpu
-epochs: 25
+epochs: 250
 factor: 0.2
 img_size: 288
 latent_dim: 356
 lr: 0.01
-min_lr: 0.0005
+min_lr: 0.0001
 mode: min
 model_paths:
 - this is not a path
-- ./models/CAE 14Sep14h32/model.pth
-- ./models/CAE 14Sep15h01/model.pth
+- ./models/CAE 14Sep20h12/model.pth
+num_workers: 6
 patience: 5
 shuffle: true
 test_batch: 32
-train_batch: 128
-transforms: resize,tensor
+train_batch: 8
+transforms: randomflip,randomflip,resize,tensor
