@@ -1,20 +1,19 @@
+checkpoint_path: NONE
 d_type: train
 dataset: standford
 dataset_path: /data/students/louis/standfordcars/standfordcars/
-device: gpu
-epochs: 250
-factor: 0.2
+epochs: 25
 img_size: 288
-latent_dim: 356
+latent_dim: 384
 lr: 0.01
-min_lr: 0.0001
-mode: min
 model_paths:
 - this is not a path
-- ./models/CAE 14Sep20h12/model.pth
+- ./models/CAE/CAE 16Sep16h22//model.pth
+- ./models/CAE/CAE 18Sep20h02//model.pth
+- ./models/CAE/CAE 18Sep23h47//model.pth
 num_workers: 6
 patience: 5
 shuffle: true
+task: reconstruction
 test_batch: 32
-train_batch: 8
-transforms: randomflip,randomflip,resize,tensor
+transforms: pil,randomflip,randomflip,resize,tensor

@@ -111,15 +111,17 @@ def parse_transforms(trans_str_list,img_size):
  
 # moving files from a directory to another
 def move_files (
-    source = "/data/students/louis/standfordcars/standfordcars/test/",
-    dest = "/data/students/louis/standfordcars/standfordcars/val/"
+    source = "/data/students/louis/cars_data/data3a/test/",
+    dest = "/data/students/louis/cars_data/data3a/training/01-minor/"
     ):
     list_imgs = os.listdir(source)
 
-    test_set = random.sample(list_imgs,100)
+    # test_set = random.sample(list_imgs,30)
 
-    for file in test_set:
-        # construct full file path
-        destination = dest + file
-        # move file
-        shutil.move(source+ file, destination)
+    for file in list_imgs:
+
+        if file.endswith("JPEG") or file.endswith("jpeg"):
+            # construct full file path
+            destination = dest + file
+            # move file
+            shutil.move(source+ file, destination)
