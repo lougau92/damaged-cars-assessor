@@ -9,6 +9,21 @@ from torchvision.io import read_image
 import torchvision.transforms as transforms
 import random
 import shutil
+from pytorch_lightning import LightningDataModule, LightningModule, Trainer
+
+# converts an array of strings to pytorch transforms
+def parse_transforms(trans_str_list,img_size):
+    
+    switch = {
+        "pil" : transforms.ToPILImage(),
+        "resize" : torchvision.transforms.Resize((img_size,img_size)),
+        "randomflip" : transforms.RandomHorizontalFlip(),
+        "randomcrop" : transforms.RandomResizedCrop(int(4*img_size/5)),
+        "tensor" : torchvision.transforms.ToTensor()
+        } 
+
+    return torchvision.transforms.Compose([switch.get(x) for x in trans_str_list])
+ 
 
 class StanfordCars(Dataset):
     
@@ -74,6 +89,55 @@ class CarsDataset(Dataset):
         if self.target_transform:
             label = self.target_transform(label)
         return image, label
+
+class CarsDataModule(LightningDataModule):
+    def __init__(
+        self,
+        transforms = parse_transforms(['pil','resize','tensor'],128),
+        data_dir: str = "/home/p63744/projects/louis/cars_data/internet_dataset_cleaned/data1a/",
+        batch_size: int = 4,
+        num_workers: int = 4,
+    ):
+        super().__init__()
+        self.data_dir = data_dir
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+
+
+        self.dims = (1, 28, 28)
+        self.num_classes = 2
+
+        self.classes_dict = 'damaged'
+        if self.classes_dict == "severity":
+            self.classes_dict = {0:'01-minor',1:'02-moderate',2:'03-severe'}
+        elif self.classes_dict == "location":
+            self.classes_dict = {0:'front',1:'back',2:'side'}
+        elif self.classes_dict == "damaged":
+            self.classes_dict = {0:'00-damage',1:'01-whole'}
+
+    def setup(self, stage=None):
+        # Assign train/val datasets for use in dataloaders
+        if stage == "fit" or stage is None:
+            self.ds_train = build_dataset(self.data_dir+"training/",self.classes_dict,"train_damage",transforms)
+            self.ds_val = build_dataset(self.data_dir+"validation/",self.classes_dict,"valid_damage",transforms)
+
+        # Assign test dataset for use in dataloader(s)
+        if stage == "test" or stage is None:
+            self.ds_test = build_dataset(self.data_dir+"test/",self.classes_dict,"test_damage",self.transforms)
+
+    def train_dataloader(self):
+        return DataLoader(
+            self.ds_train,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
+
+    def val_dataloader(self):
+        return DataLoader(self.ds_val, batch_size=self.batch_size, num_workers=self.num_workers)
+
+    def test_dataloader(self):
+        return DataLoader(self.ds_test, batch_size=self.batch_size, num_workers=self.num_workers)
+
 
 # function build espcially from loading the cars_data dataset, that organised the images in their corresponding class folder
 def build_dataset(data_path,classes,dataset_name,dataset_transforms):

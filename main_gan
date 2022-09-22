@@ -1,0 +1,245 @@
+from torch.optim import Adam
+from gan import *
+import torchvision
+import torch
+import pytorch_lightning as pl
+import utils
+
+if __name__ == '__main__':
+  
+  ## Define hyperparameters
+  epochs = 10
+  image_shape = (128, 128, 3)
+  z_shape = 100
+  TRAIN_GAN = True
+  TRAIN_ENCODER = False
+  TRAIN_GAN_WITH_FR = False
+  fr_image_shape = (192, 192, 3)
+  
+  
+  ## Define optimizers
+#   adversarial_optimizer = Adam(lr = 0.0002, beta_1 = 0.5, beta_2 = 0.999, epsilon = 10e-8)
+  
+  """
+  Load the dataset
+  """
+  
+  data_path = "/home/p63744/projects/louis/cars_data/internet_dataset_cleaned/data1a/"
+  severity_train_path = data_path+"training/"
+  severity_valid_path = data_path+"validation/"
+  train_batch = 4
+  shuffle = False
+  num_workers = 4    
+  classes_dict = 'damaged'
+  if classes_dict == "severity":
+    classes_dict = {0:'01-minor',1:'02-moderate',2:'03-severe'}
+  elif classes_dict == "location":
+    classes_dict = {0:'front',1:'back',2:'side'}
+  elif classes_dict == "damaged":
+    classes_dict = {0:'00-damage',1:'01-whole'}
+  transforms = utils.parse_transforms(['pil','resize','tensor'],128)
+
+
+  train_severity_ds = utils.build_dataset(severity_train_path,classes_dict,"train_severity",transforms)
+  valid_severity_ds = utils.build_dataset(severity_valid_path,classes_dict,"valid_severity",transforms)
+
+
+  trainloader = torch.utils.data.DataLoader(train_severity_ds, batch_size=train_batch, shuffle=shuffle,num_workers=num_workers)
+  valloader = torch.utils.data.DataLoader(valid_severity_ds, batch_size=int(train_batch/2), shuffle=shuffle,num_workers=num_workers)
+
+  classes = len(set(classes_dict))
+  
+   ## Implement label smoothing
+  real_labels = np.ones((train_batch, 1), dtype = np.float32) * 0.9
+  fake_labels = np.zeros((train_batch, 1), dtype = np.float32) * 0.1
+  
+  
+  """
+  Train the generator and the discriminator network
+  """
+  
+  if TRAIN_GAN:
+    
+    model = GAN(channels = 3, width = image_shape[0],height = image_shape[1], batch_size =train_batch)
+    trainer = Trainer(
+        accelerator="auto",
+        devices=1 if torch.cuda.is_available() else None,  # limiting got iPython runs
+        max_epochs=5,
+        callbacks=[TQDMProgressBar(refresh_rate=20)],
+    )
+    trainer.fit(model, utils.CarsDataModule())
+
+
+    ## Save networks
+    try:
+      generator.save_weights("generator.h5")
+      discriminator.save_weights("discriminator.h5")
+    except Exception as e:
+      print("Error: ", e)
+      
+  
+  """
+  Train encoder
+  """
+  
+  if TRAIN_ENCODER:
+    
+    ## Build and compile encoder
+    encoder = build_encoder()
+    encoder.compile(loss = euclidean_distance_loss,
+                    optimizer = 'adam')
+    
+    
+    ## Load the generator network's weights
+    try:
+      generator.load_weights("generator.h5")
+    except Exception as e:
+      print("Error: ", e)
+      
+    
+    z_i = np.random.normal(0, 1, size = (5000, z_shape))
+    
+    y = np.random.randint(low = 0, high = 6, size = (5000, ),
+                          dtype = np.int64)
+    num_classes = len(set(y))
+    y = np.reshape(np.array(y), [len(y), 1])
+    y = to_categorical(y, num_classes = num_classes)
+    
+    
+    for epoch in range(epochs):
+      print("Epoch: ", epoch)
+      
+      encoder_losses = []
+      
+      number_of_batches = int(z_i.shape[0] / batch_size)
+      print("Number of batches: ", number_of_batches)
+      
+      for index in range(number_of_batches):
+        print("Batch: ", index + 1)
+        
+        z_batch = z_i[index * batch_size: (index + 1) * batch_size]
+        y_batch = y[index * batch_size: (index + 1) * batch_size]
+        
+        generated_images = generator.predict_on_batch([z_batch, y_batch])
+        
+        
+        ## Train the encoder model
+        encoder_loss = encoder.train_on_batch(generated_images, z_batch)
+        print("Encoder loss: ", encoder_loss)
+        
+        encoder_losses.append(encoder_loss)
+        
+        
+      ## Write the encoder loss to Tensorboard
+      write_log(tensorboard, "encoder_loss", np.mean(encoder_losses), epoch)
+      
+    ## Save the encoder model
+    encoder.save_weights("encoder.h5")
+    
+    
+  """
+  Optimize the encoder and the generator network
+  """
+  
+  if TRAIN_GAN_WITH_FR:
+    
+    ## Load the encoder network
+    encoder = build_encoder()
+    encoder.load_weights("encoder.h5")
+    
+    
+    ## Load the generator network
+    generator.load_weights("generator.h5")
+    
+    image_resizer = build_image_resizer()
+    image_resizer.compile(loss = ['binary_crossentropy'],
+                          optimzer = 'adam')
+    
+    
+    ## Face recognition model  
+    fr_model = build_fr_model(input_shape = fr_image_shape)
+    fr_model.compile(loss = ['binary_crossentropy'],
+                     optimizer = 'adam')
+    
+    ## Make the face recognition model as non-trainable
+    fr_model.trainable = False
+    
+    
+    ## Input layers
+    input_image = Input(shape = (64, 64, 3))
+    input_label = Input(shape = (6, ))
+    
+    
+    ## Use the encoder and the generator network
+    latent0 = encoder(input_image)
+    gen_images = generator([latent0, input_label])
+    
+    
+    ## Resize images to the desired shape
+    resized_images = Lambda(lambda x: K.resize_images(gen_images, height_factor = 3,
+                                                      width_factor = 3,
+                                                      data_format = 'channels_last'))(gen_images) 
+    embeddings = fr_model(resized_images)
+    
+    
+    ## Create a Keras model and specify the inputs and outputs for the network
+    fr_adversarial_model = Model(inputs = [input_image, input_label],
+                                 outputs = [embeddings])
+    
+    
+    ## Compile the model
+    fr_adversarial_model.compile(loss = euclidean_distance_loss,
+                                 optimizer = adversarial_optimizer)
+    
+    for epoch in range(epochs):
+      print("Epoch: ", epoch)
+      
+      reconstruction_losses = []
+      
+      number_of_batches = int(len(loaded_images) / batch_size)
+      print("Number of batches: ", number_of_batches)
+      for index in range(number_of_batches):
+        print("Batch: ", index + 1)
+        
+        images_batch = loaded_images[index * batch_size: (index + 1) * batch_size]
+        images_batch = images_batch / 127.5 - 1.0
+        images_batch = images_batch.astype(np.float32)
+        
+        y_batch = y[index * batch_size: (index + 1) * batch_size]
+        
+        images_batch_resized = image_resizer.predict_on_batch(images_batch)
+        
+        real_embeddings = fr_model.predict_on_batch(images_batch_resized)
+        
+        reconstruction_loss = fr_adversarial_model.train_on_batch([images_batch, y_batch], real_embeddings)
+        
+        print("Reconstruction loss: ", reconstruction_loss)
+        
+        reconstruction_losses.append(reconstruction_loss)
+        
+        
+      ## Write the reconstruction loss to Tensorboard
+      write_log(tensorboard, "reconstruction_loss", np.mean(reconstruction_losses), epoch)
+      
+      
+      """
+      Generate images
+      """
+      
+      if epoch % 10 == 0:
+        images_batch = loaded_images[0:batch_size]
+        images_batch = images_batch / 127.5 - 1.0
+        images_batch = images_batch.astype(np.float32)
+        
+        y_batch = y[0:batch_size]
+        z_noise = np.random.normal(0, 1, size = (batch_size, z_shape))
+        
+        gen_images = generator.predict_on_batch([z_noise, y_batch])
+        
+        for i, img in enumerate(gen_images[:5]):
+          save_rgb_image(img, path = "results/img_opt_{}_{}.png".format(epoch, i))
+        
+        
+    ## Save improved weights for both of the networks
+    generator.save_weights("generator_optimized.h5")
+    encoder.save_weights("encoder_optimized.h5")
