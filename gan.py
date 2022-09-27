@@ -55,46 +55,53 @@ class Reshape(nn.Module):
         self.shape = args
 
     def forward(self, x):
-        return x.view(self.shape)
+        # print(self.shape)
+        return x.view(self.shape[0])
 
 class Generator(nn.Module):
-    def __init__(self, latent_dim,input_dim, acf=nn.GELU, base_filters = 3):
+
+    def __init__(self, latent_dim,batch, input_dim, acf=nn.GELU, base_filters = 3):
     
         super().__init__()
-        # self.reshape_layer = Reshape((8, 8, 256))
         num_classes = 2
-      
-        self.generator = nn.Sequential(
+        self.latent_dim = latent_dim
+        self.batch = batch
+        # x = torch.concat((input_z_noise, input_label),1)
 
-            # x = torch.concat((input_z_noise, input_label),1)
-            
-            nn.Linear(out_features = 2048, in_features = latent_dim + num_classes),
+        self.generatorA = nn.Sequential(
+                        
+            nn.Linear(out_features = 2048, in_features = latent_dim),
             acf(),            
             nn.Dropout(0.2),
             
             nn.Linear(in_features = 2048, out_features =256 * 8 * 8),
-            nn.BatchNorm2d(256 * 8 * 8),
+            nn.BatchNorm1d(256 * 8 * 8),
             acf(),            
-            nn.Dropout(0.2),
-            
-            Reshape((8, 8, 256)),
+            nn.Dropout(0.2)
+        )    
         
+        self.generatorB = nn.Sequential(
+
             nn.Upsample(scale_factor = 2),
-            nn.Conv2d( 8, 128, kernel_size = 5, padding = 1),
-            nn.BatchNorm2d(128,momentum=0.8),
+            nn.Conv2d( 64, 32, kernel_size = 5, padding = 'same'),
+            nn.BatchNorm2d(32,momentum=0.8),
             acf(),            
             
             nn.Upsample(scale_factor = 2),
-            nn.Conv2d(128, 64, kernel_size = 5, padding = 1),
-            nn.BatchNorm2d(64,momentum=0.8),
+            nn.Conv2d(32, 16, kernel_size = 5, padding = 'same'),
+            nn.BatchNorm2d(16,momentum=0.8),
             acf(),            
             
             nn.Upsample(scale_factor = 2),
-            nn.Conv2d(64, 3, kernel_size = 5, padding = 1),
+            nn.Conv2d(16, 3, kernel_size = 5, padding = 'same'),
             nn.Sigmoid()
         )
     def forward(self,x):
-                x_hat = self.generator(x)       
+                x_hat = self.generatorA(x)
+                # batch = int(x_hat.shape[0]/64/16/16)
+                # if self.batch < batch: print("batch error", batch)
+                x_hat = x_hat.view(x_hat.shape[0], 64, 16, 16)
+                x_hat = self.generatorB(x_hat)
                 return x_hat
             
 
@@ -104,32 +111,28 @@ class LambdaLayer(nn.Module):
         self.lambd = nn
     def forward(self, x):
         return self.lambd(x)
-         
-def expand_label_input(x):
-    x = K.expand_dims(x, axis = 1)
-    x = K.expand_dims(x, axis = 1)
-    x = K.tile(x, [1, 32, 32, 1])
-    return x
+
 
 class Discriminator(nn.Module):
-    def __init__(self, latent_dim,input_dim, acf=nn.GELU, base_filters = 3):
+    def __init__(self, input_dim,batch_size, acf=nn.GELU, base_filters = 3):
     
         super().__init__()
     
     
         label_shape = (2, )
-        # image_input = Input(shape = input_shape)
-        # label_input = Input(shape = label_shape)
-        
-        self.layer1 =  nn.Sequential(
+     
+        # self.layer1 =  nn.Sequential(
 
-            nn.Conv2d(3, 64, kernel_size = 3, stride = 2, padding = 1),
-            acf()
-        )
+        #     nn.Conv2d(3, 32, kernel_size = 3, stride = 2, padding = 1),
+        #     acf()
+        # )
 
         self.discriminator =  nn.Sequential(      
             
-            nn.Conv2d(64, 128, kernel_size = 3, stride = 2, padding = 1),
+            nn.Conv2d(3, 32, kernel_size = 3, stride = 2, padding = 1),
+            acf(),
+
+            nn.Conv2d(32, 128, kernel_size = 3, stride = 2, padding = 1),
             nn.BatchNorm2d(128),
             acf(),            
             
@@ -142,16 +145,26 @@ class Discriminator(nn.Module):
             acf(),            
             
             nn.Flatten(),
-            nn.Linear(512*input_dim*input_dim,out_features = 1),
+            nn.Linear(2*input_dim*input_dim,out_features = 1),
             nn.Sigmoid()
         )
         
     def forward(self,x):
-                x = self.layer1(x)
-                label_input1 = expand_label_input(torch.tensor(np.zeros(2,1)))
-                x = nn.concat([x, label_input1], axis = 3)
+                # device = torch.device("cuda" if torch.cuda.is_available() else "cpu",0)
+
+                # x = self.layer1(x)
+                # label_input1 = expand_label_input(torch.tensor(0).to(device))
+                # x = torch.cat([x, label_input1], axis = 0)
                 x_hat = self.discriminator(x)       
                 return x_hat  
+
+         
+# def expand_label_input(x):
+#     # x = K.expand_dims(x, axis = 1)
+#     # x = K.expand_dims(x, axis = 1)
+#     x = x[None]
+#     # x = K.tile(x, [1, 32, 32, 1])
+#     return x
 
 class GAN(LightningModule):
     def __init__(
@@ -159,11 +172,11 @@ class GAN(LightningModule):
         channels,
         width,
         height,
+        batch_size,
         latent_dim: int = 100,
         lr: float = 0.0002,
         b1: float = 0.5,
         b2: float = 0.999,
-        batch_size: int = 4,
         **kwargs,
     ):
         super().__init__()
@@ -171,18 +184,19 @@ class GAN(LightningModule):
 
         # networks
         data_shape = (channels, width, height)
-        self.generator = Generator(latent_dim=self.hparams.latent_dim, input_dim=self.hparams.height)
-        self.discriminator = Discriminator(latent_dim=self.hparams.latent_dim, input_dim=self.hparams.height)
+        self.generator = Generator(latent_dim=self.hparams.latent_dim, input_dim=self.hparams.height,batch=batch_size)
+        self.discriminator = Discriminator(input_dim=self.hparams.height,batch_size=batch_size)
 
         self.validation_z = torch.randn(8, self.hparams.latent_dim)
 
-        self.example_input_array = torch.zeros(2, self.hparams.latent_dim)
+        self.example_input_array = torch.zeros(batch_size, self.hparams.latent_dim)
     def forward(self, z):
         return self.generator(z)
 
     def adversarial_loss(self, y_hat, y):
         return F.binary_cross_entropy(y_hat, y)
 
+# https://pytorch-lightning.readthedocs.io/en/stable/notebooks/lightning_examples/basic-gan.html
     def training_step(self, batch, batch_idx, optimizer_idx):
         imgs, _ = batch
 
@@ -192,6 +206,8 @@ class GAN(LightningModule):
 
         # train generator
         if optimizer_idx == 0:
+            # print("train gene",imgs.size())
+
 
             # generate images
             self.generated_imgs = self(z)
@@ -207,9 +223,10 @@ class GAN(LightningModule):
             valid = valid.type_as(imgs)
 
             # adversarial loss is binary cross-entropy
-            g_loss = self.adversarial_loss(self.discriminator(self(z)), valid)
+            g_loss = self.adversarial_loss(self.discriminator(self.generated_imgs), valid)
             self.log("g_loss", g_loss, prog_bar=True)
             return g_loss
+
 
         # train discriminator
         if optimizer_idx == 1:
@@ -242,6 +259,9 @@ class GAN(LightningModule):
         return [opt_g, opt_d], []
 
     def on_validation_epoch_end(self):
+        print()
+        print("validation end")
+        print()
         z = self.validation_z.type_as(self.generator.model[0].weight)
 
         # log sampled images

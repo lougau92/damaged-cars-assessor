@@ -10,6 +10,7 @@ import torchvision.transforms as transforms
 import random
 import shutil
 from pytorch_lightning import LightningDataModule, LightningModule, Trainer
+from torch.utils.data import DataLoader, random_split
 
 # converts an array of strings to pytorch transforms
 def parse_transforms(trans_str_list,img_size):
@@ -84,8 +85,16 @@ class CarsDataset(Dataset):
         img_path = os.path.join(self.img_dirs[count], self.img_labels.iloc[idx, 0])
         image = read_image(img_path)
         label = self.img_labels.iloc[idx, 1]
-        if self.transform:
-            image = self.transform(image)
+
+        try:
+            if self.transform:
+                image = self.transform(image)
+        except:
+            print("error")
+            # print(self.transform)
+            # print(type(self.transform))
+            # # print(image)
+            # print(type(image))
         if self.target_transform:
             label = self.target_transform(label)
         return image, label
@@ -102,7 +111,7 @@ class CarsDataModule(LightningDataModule):
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.num_workers = num_workers
-
+        self.transforms = transforms
 
         self.dims = (1, 28, 28)
         self.num_classes = 2
@@ -118,8 +127,8 @@ class CarsDataModule(LightningDataModule):
     def setup(self, stage=None):
         # Assign train/val datasets for use in dataloaders
         if stage == "fit" or stage is None:
-            self.ds_train = build_dataset(self.data_dir+"training/",self.classes_dict,"train_damage",transforms)
-            self.ds_val = build_dataset(self.data_dir+"validation/",self.classes_dict,"valid_damage",transforms)
+            self.ds_train = build_dataset(self.data_dir+"test/",self.classes_dict,"train_damage",self.transforms)
+            self.ds_val = build_dataset(self.data_dir+"validation/",self.classes_dict,"valid_damage",self.transforms)
 
         # Assign test dataset for use in dataloader(s)
         if stage == "test" or stage is None:
