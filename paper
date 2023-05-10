@@ -1,0 +1,498 @@
+How Can EXAI Be (Un)intentionally Fooled? A Survey on the
+Adversarial Techniques With a Focus on Deep Learning
+Louis Gauthy - i6188059
+ACM Reference Format:
+Louis Gauthy - i6188059. 2023. How Can EXAI Be (Un)intentionally Fooled?
+A Survey on the Adversarial Techniques With a Focus on Deep Learning. In
+Proceedings of ACM Conference (Conference’17). ACM, New York, NY, USA,
+5 pages. https://doi.org/10.1145/nnnnnnn.nnnnnnn
+1 INRODUCTION
+In recent years, black-bock deep learning models have become
+more and more effective in various tedious task, helping fields such
+as Computer Vision and Natural Language Processing. A lot en-
+thusiasm went to this revolutionary technology, in disfavour of
+classical inherently explainable models. [Rud19] even argues that
+some myth is believed that the more complex model you have, the
+better performances you can get. The main downside for complex
+black-box models is that they come with a cost of low explainability.
+This limitation is inconvenient in circumstances where the reason-
+ing and justification behind a decision is crucial, in applications
+such as healthcare, justice or finance. Thus, again great enthusi-
+asm was granted to make those models more explainable, using
+perturbation-based, gradient-based or propagation-based methods.
+During my study of the EXAI course, I was intrigued by the fact
+that one adversary party could fool the explainability methods and
+hide totally or partially a biased model. Thus I want to dive deep
+in the topic and explore all the other adversarial techniques that
+were introduced in the literature, with a focus on deep learning
+explanations.
+This survey provides an overview of these adversarial techniques
+on explanations of DL models. This informs on the limitations of
+the explainable methods of models that are more and more com-
+monly used. Those limitations help to have more critical perspec-
+tive on the explainability methods that will be shown vulnerable
+to (un)intentional attacks. A plausible attack scenario given by
+[ HJM19] would be that a lazy machine learning practitioner finds
+out that his model is biased. Instead of trying to fix the biased
+model which may be challenging, he/she may instead just fool the
+explanation technique and craft a another desired output of the
+methods, e.g. the models are using logical and acceptable feature
+to make their decision.
+Black boxes models lack interpretability. This weakens the trust
+in the model and limits the useful information to improve the model
+further. Thus, [ Rud19] urges to stop using black-box models for
+high stakes decisions and use inherently explainable models instead.
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed
+for profit or commercial advantage and that copies bear this notice and the full citation
+on the first page. Copyrights for components of this work owned by others than ACM
+must be honored. Abstracting with credit is permitted. To copy otherwise, or republish,
+to post on servers or to redistribute to lists, requires prior specific permission and/or a
+fee. Request permissions from permissions@acm.org.
+Conference’17, July 2017, Washington, DC, USA
+© 2023 Association for Computing Machinery.
+ACM ISBN 978-x-xxxx-xxxx-x/YY/MM. . . $15.00
+https://doi.org/10.1145/nnnnnnn.nnnnnnn
+The survey is based on six papers related to the topic. First,
+[ SHJ+20 ] provides a generic approach for fooling the black-box
+explainers LIME and SHAP. Then, [DAA+19], [HJM19 ], [BK22],
+[ CLS+23], look specifically at fooling explainers for Deep Learning
+models. [HJM19] looked at fooling the gradient and propagation-
+based methods, [BK22 ] looked at fooling concept-based interpretabil-
+ity methods and [ DAA+19 ] attacked the training images.[CLS+23 ]
+proposed a method for fooling explainers on the NLP classification
+and regression tasks. Finally [Rud19], urged to stop using black box
+model for EXAI.
+2 BACKGROUND
+Here are some definitions of terms used to understand the different
+adversarial attacks.
+2.1 Concept-based interpretability methods
+A concept-based interpretability methods is defined in [BK22] as
+methods that interrogate a model and its decisions based on a con-
+cept. For example, a concept could be a specific texture type or area.
+Testing with Concept Acitvation Vectors (TCAV) is a concept-based
+interpretability method. It measures how a concept is important
+in predictions of the model. TCAV are produced using two sets
+of positive and negative instances of a concept, for example im-
+ages contaning or not containing the concept C. The two sets are
+forwarded through the network and a binary linear classifier can
+identify their different activation impact for the different layers of
+the network. Faceted Feature Visualization (FFV) is another concept-
+based interpretability method. It also uses a positive and negative
+instances of a concept but it investigates and visualises which in-
+stance in the set a specific neuron is the most responsive.
+2.2 Layerwise Relevance Propagation
+Layerwise Relevance Propagation (LRP) was introduced in [LBM+15 ]
+and was developed especially to explain deep learning models. In
+comparison to SHAP values which forward inputs to the model,
+LRP focuses on the backpropagation of the model predictions. LRP
+is based on the principle that the total relevance is conserved when
+back propagating it from layer to layer, where relevance is defined
+as the activation strength of an output node for a certain class
+[ BEWR19]. Different LRP variations exist, each with different pro-
+tocols for passing relevance from one layer to another, and the
+version used in this study is the 𝛽 − 𝑟𝑢𝑙𝑒. This rule is chosen in
+[ BEWR19] because it allows for the tuning of the weights given to
+the position contribution and negative contribution to the decision
+of the model. The LRP results can be visualised in a heatmap that
+portrays the input space in which each voxel contribution’s im-
+portance to the final decision is represented. The method provided
+accurate results.
+Conference’17, July 2017, Washington, DC, USA Louis Gauthy - i6188059
+2.3 Grad-CAM
+Grad-CAM or Gradient-weighted Class Activation Mapping was
+introduced in [SCD+19] and initially developed for explaining deci-
+sions of convolutional neural networks. It is common practice to the
+target layer as the last convolutional layer of the network, where
+the target layer is the unique network layer that the Grad-CAM
+explains. This layer choice is motivated by the fact convolutional
+layers naturally retain spatial information, and because the last
+layer building a higher-level feature space is the best compromise
+between high-level semantics and detailed spatial. Grad-CAM is
+calculated by first backpropagating the gradients for a target class 𝑐
+to the chosen target layer 𝑘, obtaining neuron importance weights,
+𝛼𝑐
+𝑘 representing "a partial linearisation of the deep network down-
+stream from feature map activations 𝐴𝑘 " [SCD+19]. Grad-CAM is
+formalised as follows: 𝐿𝑐
+𝐺𝑟𝑎𝑑 −𝐶𝐴𝑀 = 𝑅𝑒𝐿𝑈 (Í𝑘 𝛼𝑐
+𝑘 𝐴𝑘 )
+2.4 Perturbation-Based Model-Agnostic
+Explainers
+SHAP and LIME are model-agnostic meaning that they do not
+have access to the model and provide the explanations based on
+the model outputs. SHAP (SHapley Additive exPlanation) was in-
+troduced in [ LL17]. It is a statistical method that investigates the
+influence of input feature variations on the model’s outcomes by
+average across all permutations of the features joining the model.
+SHAP explains individual predictions and the results can be visu-
+alised in heatmaps that reveal what inputs or group of inputs had
+the most importance in a prediction, providing insight into which
+features had the most weight in the detection decision. Similarly
+to SHAP, LIME (Local Interpretable Model Agnostic Explanations)
+[RSG16 ] is another model-agnostic explainability technique that is
+perturbation-based. LIME perturb instances by crafting instances
+in the neigbourhood of the explained instance using a kernel as
+a proximity measure. Countrary to SHAP, LIME does not benefit
+from theoretical guarantees.
+3 ADVERSARIAL ATTACKS ON
+EXPLAINABILITY METHODS
+[BK22 ] introduce the Token Pushing (TP) attack. This attack works
+by adding a small alteration 𝜖 is is made to the tokens to make the
+predictions of the model fail. The alteration needs to be small in
+order to not be detected. To find that small 𝜖, the authors used the
+projected gradient descent for attacks (PGD), using as objective
+function a minimisation of the difference between the prediction
+of the set altered adversarial images and a ’Centroid’ which is
+the prediction of some set unrelated image, for example images
+disparate class to predicted class. Moreover, the author also explored
+adding some Gaussian noise to to the tokens as a second type of
+attack. They note that is attack could be of an unintended nature
+as the tokens could simply be corrupted by a quality loss.
+Regarding the propagation and gradient-based methods, one
+might think that they would be harder to fool them since they have
+full access to the model, contrary to black-box model explanation
+methods. [HJM19] introduced a to fool interpretations by changing
+the model, called fine tuning. This change is constraint to loose as
+few accuracy as possible. [ HJM19] categorised the attacks into Pas-
+sive and Active fooling attacks. Passive fooling aims at making the
+interpretations useless and uninformative whereas Active fooling
+aims at actively changing the meaning of the interpretations to
+some other target meaning. The authors experimented with three
+different ways of downgrading the meaning of the explanations, aka
+passive fooling. Each of them is implemented by adding penalties in-
+volving the interpretation results to the Loss function of network in
+addition to the penalty of wrongly predicting an instance. First, they
+design a location fooling where they constraint that one specific
+part of an image e.g. the top right corner is the unique meaningful
+spot extracted by the explainers. Technically, the added penalty
+calculated with the distance from the interpretations to the spot.
+Second, they design a top-k fooling where they enforce to remove
+important most explanations, leaving the noisy, less informative
+explanations. Here the penalty is set to be the sum of weights of
+the top k pixels. Third, the authors design a center-mass fooling
+where to enforce to move away the center of mass of an explanation
+as much as possible. Here the penalty is calculated with distance
+fro the original center of mass to the adversarial center of mass.
+Lastly, the authors choose to enforce an active fooling swapping the
+interpretation of of a class with the one of another class. Here, the
+penalty is calculated with distance between original an explanation
+of a class A and the explanation of class B.
+[DAA+19] also introduced attacks for the propagation- and gradient-
+based methods but instead of attacking the model, they focused
+on attacking the input images. They modify the images with an
+undetectable noise that make the explanation result in some arbi-
+trary target maps, for example target map explanation a dog image
+could be for instance produced by explaining an image of a cat. The
+implementation procedure of the attack is similar to [HJM19]. The
+authors introduce a tuned loss function that penalises the distance
+between the model explanation and a target explanation, together
+with the distance between the original image prediction and the
+prediction of the manipulated image to assure that the model per-
+formances are preserved. During the image alteration procedure,
+the authors assure that image matrix is still valid by clamping the
+image after each iteration.
+Lastly, both [ SHJ+20 ] and [ CLS+23 ] introduced methods for fool-
+ing the SHAP and LIME model-agnostic explainers. [SHJ+20 ] pro-
+posed a general framework, hence not specific to Deep Learning,
+to build a classifier that can fool the explainers. This classifier
+has a dual behaviour. It can be granted an arbitrary behavior, for
+instance a biased behavior, when predicting the class for a true
+instance, coming from the dataset. However, the model behaves
+like an ordinary (unbiased) classifier when predicting the perturbed
+instances, called (OOD) out-of-distribution samples, artificially cre-
+ated and used by SHAP and LIME to compute their explanations.
+Obviously, this biased class relies on the fact that is able to detect
+those OOD and its explanation alteration efficiency thus depends
+on the OOD detection performance of any benchmark classifier.
+Then, [ CLS+23 ] introduced a method for fooling additive feature
+attribution explainable methods explaining Deep Learning model
+on Natural Language Processing classification and regression tasks.
+Their proposed attack manipulates the inputs sentences in order to
+get biased preferred prediction. The attack is divided in two steps.
+First, the sensitivity estimation aims at exploring what tokens the
+How Can EXAI Be (Un)intentionally Fooled? A Survey on the Adversarial Techniques With a Focus on Deep Learning Conference’17, July 2017, Washington, DC, USA
+model is the most sensitive to, or which words influence the most
+the model prediction. This is done by back-propagating the pre-
+dictions to each individual word. An alternative to compute the
+word influence is by using a deletion-based approach. We compare
+the models outputs when certain words are removed from a sen-
+tence. Here the authors notes that this first step is common to the
+explainers since they are also trying to to estimate the sensitivity
+of multiple tokens and are also model-agnostic. There are thus im-
+plementing the first of the attack by using existing model-agnostic
+explainers SHAP and LIME, they call this technique eXplanation-
+based method for crafting Adversarial Text Attacks (XATA). XATA
+takes advantage of the properites of SHAP and LIME. They train
+a local model and thus and they can thus reflect on the (direction)
+positive or negative contributions of the tokens. They also provide
+additive attribution design forces that the sum of the contributions
+equal to total contribution of a set of token. The second step of the
+attack is to design perturbed examples. The author chose to imple-
+ment the perturbation based on sensitivity analysis and with the
+constraint that the perturbed words must be similar to the original
+words, called a visualy-similar-character replacement perburbation.
+The attack then to tries to minimally perturb tokens that have a
+higher sensitivity score.
+4 EVALUATION FOR ADVERSARIAL ATTACK
+METHODS
+In this section, the limitations and strengths the different adversarial
+attacks are investigated, as well as quantitative performance.
+In [ BK22 ], TP attacks were able to make both FFV and TCAV fail.
+TP attacks has also been show to have some robustness to variation
+of model architecture. In order to apply an adversary attack, one
+should have access to at least the set of positive tokens in order to
+be able to attack them and alter them. Moreover, the adversary part
+needs to have access to some model trained on the same dataset as
+the attacked model, since the attack is robust to model architecture
+variations. [BK22] refer to this property as ’moderate transferabil-
+ity’. The attack is also effective on any concept-based interpretabil-
+ity method and is thus robust to variations of the concept-based
+interpretability method.
+[HJM19] adversarial do not modify the data but assign adversar-
+ial weights the model and one adversarial party must have access
+to the model. They authors consider that the fact that they only
+need to change the model parameters, not its architecture is an
+asset. Todo? Also, their method can control for a threshold between
+accuracy preservation and the adversarial effects magnitude. The
+authors also observe that the level of fooling connects with the
+model complexity. More complex interpretations methods (consid-
+ering more gradients or more neurons) are harder to fool. Lastly, the
+authors emphases that the adversarial technique can be transferred
+to other interpretation method.
+On the research of [ DAA+19 ], the attack relies on geometrical
+properties of a network and their framework is bounded theoreti-
+cally by principle curvatures and geodesic distance between original
+and manipulated image. An adversarial party would need to have
+access the model but would not need to change its parameters. As
+for [HJM19], the framework can be tuned with a threshold parame-
+ter that control for the model performance preservation over the
+explanations manipulation strength. The authors also note that
+the attack can be mitigated by Beta-smoothing the explanations
+methods. Also, the additive term is image-specific and the has to
+be computed for every image, and a few thousands iterations of
+gradient descent per image, limiting the scalability of the method.
+The authors of [SHJ+20] have also shown that the LIME kernel
+size does influence a lot the attack’s effectiveness. Likewise, the
+number of clusters used to train the adversarial classifier (for mod-
+eling distribution of X and thus detecting OOD samples), does not
+influence the attacks’ effectiveness on the SHAP explainer. Then,
+the adversary algorithm doesn’t affect the performances of the
+classifier since the OOD detection method is independent from
+the (biased) classifier and allows to encapsulate the classifier. Thus
+there is no need to deal with threshold between accuracy of the
+model and strength of the attacks. At last, the adversarial method
+can likely be transferred to other perturbation-based explainers
+than SHAP and LIME. As described in 3, the adversarial classifier
+relies on the fact that it can detect OOD samples. Thus, the effec-
+tiveness of the method relies on the fact that the distribution f of
+the data 𝑋 is special enough to be recognised from the distribution
+of perturbation g used by SHAP and LIME. For example, taking
+f and g to be two similar normal distributions, the OOD detec-
+tion algorithm will have some trouble in recognising OOD samples
+from the samples the distribution of 𝑋 . Then, the authors describe
+that the effectiveness of the adversarial classifier decreases when
+the number of features that we want to be biased increases. They
+explain this by the SHAP property that the features attributions
+must add up to the difference between the given prediction and the
+average prediction for a background distribution. Hence, when it is
+not possible to identify a truly significant feature in the prediction,
+the SHAP property encourages the distribution of the feature’s
+importance across the different features.
+In [CLS+23 ], two drawback of previous methods are handle the
+proposed introduced in the paper, XATA. First, the first drawback
+coming for gradient-based method: the direction of the sensitivity
+is ignored (positive or negative), therefore the effect of two tokens
+(that may happen to have a positive and a negative contribution,
+respectively) may be cancelled out, in an attack. Second drawback
+coming from deletion-based methods that is leviate is that no infor-
+mation on joint influence in the prediction, since the deletions are
+sequentially deleting one token. About visually-similar-character
+replacement perturbation, that should not perceivable by humans,
+the authors provide as examples the change for the letter ’o’ to
+’0’, or ’l’ to ’1’. Based on the paper explanations and examples, I
+am not convinced by the perturbation are unperceived by humans
+since it is obvious for a human or for a computer that for example
+the word ’hello’ has has been perturbed to the word ’he11o’ which
+does not exist in the dictionary. Further, I doubt that there exist a
+valid ’unperceivable’ permutation for each word possible word (or
+each possible character). The XATA method is basically using the
+explanation methods against themselves since they attack based on
+the information that the explanation methods find relevant. This
+introduces an inconvenient trade off between explainability and
+adversarial method robustness for Deep Learning since the bet-
+ter explainability methods are, the more effective attacks can be
+crafted.
+Conference’17, July 2017, Washington, DC, USA Louis Gauthy - i6188059
+4.1 Quantitative evaluation of the methods
+In [BK22 ], the Frehet Inception Distance (FID) between the set of
+altered concept images and the clean FFV runs are 1.39 and 1.34. In
+comparison, FID scores between the separate clean FFV runs, on
+two different sets of positive and negative concept image, is 0.26. It
+is also noted that the FID between TP attack set of altered concept
+images by adding Gaussian Noise and the clean FFV runs are 1.21
+and 1.14. The relevancy of the TP attack could then be questionable
+since the Gaussian Noise attack is almost as effective. The FFV thrust
+can also be questionable since they are highly sensible to Gaussian
+Noise. Then, on the attack of the TCAV method, the authors showed
+two different results, on where the attack is effective where the
+TCAV magnitude drops approximately of 65% (from 0.95 to 0.3) and
+for another experiment, the TCAV method could only drop of 20%.
+Regarding [DAA+19 ], the Structural Similarity Index Metric (SSIM)
+between the original and the attacked explanation maps varies on
+average between 73 % for gradient-based explainer and 89 % for
+Guided Backpropagation (GBP). However, the SSIM between the
+original and altered images varies on average between 99% and 94%.
+To quantitatively evaluate their adversarial method, the authors
+of [HJM19] designed Fooling Success Rates (FSR) which measures
+the effect on the attack on the explanation method. The Success
+is caculated for each validation instance and is positive (1) if the
+penalty Loss magnitude is within a satisfying range defined by
+the authors. This range is specific to the penalty Loss used and is
+defined as [0, 0.2], [0, 0.3], [0.1, 1], and [0.5, 2] for Location, Top-k,
+Center-mass, and Active fooling, respectively. The Success rate is
+the fraction of instances that passed the Success test from 10,000
+images, randomly selected from the ImageNet validation dataset for
+Passive fooling and from 200 synthetic images for Active Fooling.
+For passive fooling, the authors observe that all FSRs of fooling
+methods are higher than 50% for the matched cases, except for the
+Location fooling with LRPT for DenseNet121 which is the largest
+network considered. For active fooling, the authors find that the
+explanation swappings for two classes are clear (FSR 94,94,1 & 70%)
+in VGG19 and nearly (FSR 34,31,76 & 87 %) in ResNet50, but not (FSR
+0,0,4 & 0%) in DenseNet121. Those results suggest some relationship
+between the model complexity and the degree of Active fooling.
+Lastly, it is observed that the accuracy of the fooled model drops
+are limited to only 2%/1% for Top-1/Top-5 accuracy, respectively.
+Regarding the adversarial method developed in [ SHJ+20], assuming
+the classifier is totally able to detect OOD samples, then the biased
+model could be arbitrarily biased and can implement extreme rules
+such as ’if race = black, then high crime risk’. The authors thus the
+performance of their adversirial framework by calculating the %
+of explanations with race as top feature, against the F1 score of
+the OOD classifier. They show that the % of explanations decreases
+gradually with the increase of F1 score. They found SHAP to be
+more robust to the attacks then LIME since the % of explanations
+decreases slower. It is also noted that the performance also decreases
+as the set features to bias increases. Lastly, the author of [ CLS+23 ]
+evaluate their method over different perturbation rates which is
+the number of words perturbed in an instance. The evaluation
+metric used for the NLP classification task is the Success Rate which
+number of instance that had their prediction changed. They found
+that within perturbation rates of 0 to 10%, the sucess rates gradually
+increase to reach 47 to 89% at 10%, depending on the dataset used.
+For NLP regression tasks, the authors used the Mean Square Error
+for comparing the predictions of the model before and after the
+attack. They found that the MSE gradually increase to reach 0.55
+to 1.1, at 10%. Even though they do not use any model information,
+XATA outperformed white-box attack baselines like TextBugger
+and Gradient-Input methods.
+5 DISCUSSION
+Throughout this survey, it has been observed that explainability
+attacks target the testing images, the model itself, or exploit ex-
+plainability methods flaws. [Rud19] argues that explanations cannot
+have perfect fidelity with respect to the model and thus they some-
+how ’simplify/approximate’ the model to make it understandable
+by humans. If this process was not needed then the model would
+simply be interpretable. This simplification may be inaccurate and
+diverge from the actual model inner mechanics and this is the gap
+the adversarial method exploit. Moreover, the explanation does not
+need to mimic the model mechanics which is another flaw. For
+instance, feature importance which is trends in how predictions are
+related to features does not tell a lot about what exactly the model
+is doing mathematically. Further, it is not clear to guess based on
+saliency maps how a image is treated by the Convolutional Neu-
+ral Network. We can assess where the model put its attention on
+but this doesn’t explain how it makes it decision. [ Rud19] then
+suggest some change in nomenclature such as “summaries of pre-
+dictions,” instead of “summary statistics,” or “trends” rather than
+“explanations” to more coherent and less misleading.
+Overall, there exists two types of attacks, see 1. The first category
+aims at altering inputs used in the explanations, the second aims
+at altering the model itself. The attacks focus on a single of those
+two components since in real world settings, which should be un-
+favorable to adversarial attacks, it is less likely that an adversarial
+party has access to alter both the inputs and the model. Anyways, it
+outcomes from this survey that attacking the explanations based on
+both input and model at once may still be a gap in field of research.
+It is noted that for some the attacks [ HJM19], [ CLS+23 ], [ SHJ+20 ],
+a trade off must be chosen between explanation alteration power
+and the model accuracy preservation. Another relationship was
+noted by [HJM19 ], which suggest that the model complexity and
+the degree of active fooling effectiveness are related. It would be
+interesting to investigated how the other methods behave based on
+the model complexity.
+There is usually some transferability of the attacks within a fam-
+ily of explainability methods (for example Grad-Gam and LRP) but
+the effectiveness is usually limited. In order to prepare an effective
+attack, the attacker must know what kind of technique is used to
+explain the model. [HJM19] suggests to explore more on the trans-
+ferability of the fooling and [ DAA+19] suggest to explore how the
+theoretical analysis provided by the paper extends to propagation-
+based methods. Overall, a more thorough research would be given
+to the transferability of the attack between the different state-of-
+the-art explanation techniques that exist. It maybe appropriate
+to research attacks that have higher transferability performances
+rather then high alteration performance on a single explanation
+technique. This research is relevant is an attacker may not know
+How Can EXAI Be (Un)intentionally Fooled? A Survey on the Adversarial Techniques With a Focus on Deep Learning Conference’17, July 2017, Washington, DC, USA
+Paper Data type Attack location Attack evaluation
+Method
+Evaluation Results Transferability
+[SHJ+20] Any Continu-
+ous Data
+Model % of explanations of the
+biased feature as top
+feature
+varies of F1 of OOD classi-
+fier
+High, to any
+perturbation-based
+method
+[BK22] Image Concepts (inputs) FID for FFV, TCAV mag-
+nitude drop
+1.39 & 1.34, 65% Limited transferability
+[HJM19] Image Model weights Fooling Sucess Rate Passive fooling: near all
+higher than 50%. Active
+fooling: between 94 and 0%
+Limited transferability
+[DAA+19] Image Input Images SSIM between original
+and altered ex. map and
+im.
+73-89%, 94 -99% Not investigated
+[CLS+23] Text Input text Instances Success Rate, MSE 47-89%, 0.55 to 1.1, at 10%
+perturbation rate
+Not investigated, I ex-
+pect it High
+Table 1: Comparison of papers based on attack location, attack evaluation, and transferability.
+what kind of explanation techniques will be used the explain a
+model.
+Further, a number of further research paths have been suggested
+by the authors of the respective papers. [ BK22] suggest to extend
+the research on how TP attacks behave applied to visualisations
+that averages over a large number of image activations. The adver-
+sarial research seem less exhaustive for NLP task, and [CLS+23 ]
+suggest multiple research paths. They have experimented perturb-
+ing positive input token and they suggest to investigate attacks on
+the negative tokens, the model itself (as for the computer vision
+task) and interpretation targets rather than the positive tokens.
+Then, [CLS+23 ] suggest to analyse other explanation methods than
+additive feature attribution, for example intrinsic methods. They
+also suggest to experiment with different instance perturbation
+methods. Instead of perturbing based on visual similarity, other
+word alteration strategies such as insert, removal, flipping can be
+investigated. Lastly, the authors suggest to experiment their XATA
+framework in the field of computer vision.
+Lastly, reading this survey which provides an overview of the
+different attack which may seem hardly breakable or detectable
+and you may become reluctant in using the exp tech. Please note
+that some solutions to these attacks are also investigated be the re-
+searchers. For example, [RH20 ] introduced a simple defense mech-
+anism that consists of aggregating the explanations of multiple
+methods. In their research, the authors used the following methods
+Layerwise Relevance Propagation (LRP), Saliency Mapping (SM),
+Guided Back-prop (GB) and Integrated Gradients (IG). Hence, for
+an attacker it is possible anymore to target the flaws of a specific
+explanation method and to craft the attack based on it. It is sug-
+gested to the reader to get informed on the different solutions that
+exists and their impact on the attacks.
